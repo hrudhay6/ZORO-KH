@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZORO KH - AI PHOTO EDITOR</title>
+<style>
+body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0}
+.top{display:flex;justify-content:space-between;align-items:center;padding:15px 20px}
+.logo{font-size:32px;font-weight:900}.logo sup{font-size:11px;color:#00ff88}
+.menu{font-size:28px;cursor:pointer}
+.card{background:#111;border:1px solid #222;border-radius:20px;padding:20px;margin:20px}
+button{width:100%;padding:14px;border:none;border-radius:12px;margin-top:12px;font-weight:bold;font-size:16px;cursor:pointer}
+.g{background:#fff;color:#000}.f{background:#1877F2;color:#fff}
+.mic{width:140px;height:140px;border-radius:50%;background:#00ff88;font-size:55px;border:none;margin-top:20px;cursor:pointer;box-shadow:0 0 40px #00ff88}
+.mic.listening{animation:pulse 1s infinite;background:#ff3333;box-shadow:0 0 50px #ff3333}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+input{width:90%;padding:13px;border-radius:12px;border:none;outline:none;margin-top:10px}
+.genderBtn{background:#222;color:#fff}.genderBtn.sel{background:#00ff88;color:#000}
+.hist{background:#222;padding:10px;border-radius:10px;margin-top:8px;font-size:14px}
+.onBtn{width:180px;padding:12px 20px;border-radius:50px;background:#007bff;color:#fff;font-size:18px;font-weight:900;margin:10px auto;display:block}
+.onBtn.on{background:#00ff88;color:#000}
+#sideMenu{position:fixed;top:0;left:-100%;width:85%;max-width:340px;height:100%;background:#171717;transition:0.3s;z-index:10;display:flex;flex-direction:column;overflow-y:auto}
+#sideMenu.open{left:0}
+.menuTop{padding:20px 18px 10px;display:flex;justify-content:space-between;align-items:center}
+.menuItem{display:flex;align-items:center;gap:14px;padding:13px 18px;font-size:16px;font-weight:600;cursor:pointer;border-radius:10px;margin:2px 10px}
+.menuItem span{font-size:20px}.menuArrow{margin-left:auto;font-size:13px;color:#888}
+.subBox{display:none;padding:5px 18px 15px}.subBox.show{display:block}.subInner{background:#222;border-radius:12px;padding:12px}
+.menuFooter{margin-top:auto;padding:15px;border-top:1px solid #333}.logoutBtn{background:#222;color:#fff}
+.profilePic{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #00ff88;background:#333;display:block;margin:0 auto}
+.profilePicSmall{width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #00ff88;background:#333}
+.photoBtn{background:#222;color:#fff;font-size:13px;padding:8px}
+.wake{font-size:13px;color:#00ff88;font-weight:bold}
+.tabBtn{background:#222;color:#fff;width:auto;padding:8px 14px;margin:3px;font-size:13px}
+.tabBtn.sel{background:#00ff88;color:#000}
+.songItem{background:#222;padding:12px;border-radius:12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+.songItem b{font-size:14px}
+.playBtn{width:60px;background:#00ff88;color:#000;padding:8px;margin:0}
+.editImg{width:100%;max-height:320px;object-fit:contain;border-radius:12px;background:#000}
+.aiBox{background:#1a1a2e;border:1px solid #00ff88;border-radius:15px;padding:15px;margin-top:12px}
+.aiImg{width:100%;border-radius:12px;margin-top:10px}
+#appResult{position:fixed;bottom:0;left:0;width:100%;background:#111;border-top:2px solid #00ff88;padding:15px;z-index:90;display:none;max-height:75%;overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="top" id="topBar" style="display:none"><div class="logo">ZORO<sup>KH</sup></div><div class="menu" onclick="toggleMenu()">☰</div></div>
+<div id="sideMenu">
+<div class="menuTop"><h2>ZORO KH</h2><span onclick="toggleMenu()" style="font-size:22px;cursor:pointer">✕</span></div>
+<div class="menuItem" onclick="toggleSection('profile')"><span>👤</span> Profile <span class="menuArrow">▶</span></div>
+<div class="subBox" id="boxProfile"><div class="subInner" style="text-align:center">
+<img id="profilePic" class="profilePic" src="" style="display:none"><div id="profilePicEmoji" style="font-size:70px">👤</div>
+<input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="uploadProfilePhoto(event)">
+<button class="photoBtn" onclick="document.getElementById('profilePhotoInput').click()">📷 Add / Change Photo</button>
+<button class="photoBtn" onclick="removeProfilePhoto()" style="background:#ff3333">🗑️ Remove Photo</button>
+<hr style="border-color:#444"><p style="text-align:left">Name: <b id="profileName"></b></p><p style="text-align:left">Login: <b id="profileLogin"></b></p><p style="text-align:left">Age: <b id="profileAge"></b></p>
+<hr style="border-color:#444"><p style="text-align:left;font-weight:bold">✏️ Edit Name</p><input id="newName" placeholder="New Name (Min 4)" style="width:100%;box-sizing:border-box"><button style="background:#00ff88;color:#000" onclick="changeName()">Save Name ✅</button>
+</div></div>
+<div class="menuItem" onclick="toggleSection('history')"><span>📜</span> History <span class="menuArrow">▶</span></div>
+<div class="subBox" id="boxHistory"><div class="subInner"><div id="historyBox"></div><button onclick="clearHistory()" style="background:#ff3333;color:#fff">Clear History</button></div></div>
+<div class="menuFooter"><button class="logoutBtn" onclick="logout()">↪ Logout</button></div>
+</div>
+
+<div id="loginScreen" class="card"><h3>Welcome to ZORO KH</h3><p style="color:#888">Login with Gmail / Facebook!</p><button class="g" onclick="login('Gmail')">📧 Continue with Gmail</button><button class="f" onclick="login('Facebook')">📘 Continue with Facebook</button></div>
+<div id="genderScreen" class="card" style="display:none"><h3>Select Your Gender</h3><button class="genderBtn" onclick="selectGender('Male',this)">👦 Male</button><button class="genderBtn" onclick="selectGender('Female',this)">👧 Female</button><button style="background:#00ff88" onclick="goDetails()">Next ➡️</button></div>
+<div id="detailScreen" class="card" style="display:none"><h3>Your Details</h3><input id="userName" placeholder="Enter Your Name... (Min 4)"><input id="userAge" type="number" placeholder="Enter Your Age... (Min 5)"><button style="background:#222;color:#fff" onclick="confirmDetails()">OK ✅</button><div id="startBtn" style="display:none"><button style="background:#00ff88" onclick="saveDetails()">Start Hands-Free 🎤</button></div></div>
+
+<div id="mainScreen" style="display:none;text-align:center">
+<div style="display:flex;align-items:center;justify-content:center;gap:12px"><img id="mainProfilePic" class="profilePicSmall" src="" style="display:none"><span id="mainProfileEmoji" style="font-size:40px">👤</span><h2 id="hiText" style="margin:0"></h2></div>
+<p class="wake">🔴 ALWAYS LISTENING - Hands Free!</p>
+<div class="card" id="chatBox" style="text-align:left"></div>
+<button class="mic" id="micBtn" onclick="toggleMic()">🎤</button><p style="color:#888">Turn ON Mic and keep talking!</p><button id="onBtn" class="onBtn" onclick="toggleMic()">🔵 START LISTENING</button><p id="micStatus" style="color:#888;font-size:13px">Mic is OFF</p>
+
+<!-- AI PHOTO EDITOR -->
+<div class="card" style="text-align:left"><h3>📸 AI Photo Editor - Direct!</h3><p style="color:#888;font-size:13px">Upload a photo, tell me what to do, AI will create a new photo directly!</p>
+<input type="file" id="editPhotoInput" accept="image/*" style="display:none" onchange="loadEditPhoto(event)">
+<button style="background:#222" onclick="document.getElementById('editPhotoInput').click()">📷 Upload Photo</button>
+<div id="editArea" style="display:none">
+<p style="font-size:13px;color:#888">Original Photo:</p>
+<img id="editImg" class="editImg" src="">
+<div class="aiBox">
+<p style="font-weight:bold;margin:0">🤖 Tell AI - What To Do?</p>
+<input id="photoPrompt" placeholder="Ex: Make me look like a hero, black suit, beach background..." style="width:100%;box-sizing:border-box">
+<button style="background:#00ff88" onclick="editPhotoWithAI()">✨ Edit With AI - Direct!</button>
+<p style="font-size:12px;color:#888">Quick - Just Click:</p>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<button style="width:auto;padding:6px 10px;font-size:11px;background:#333" onclick="quickAIEdit('Make this person look like a hero, wearing black suit, mass look, cinematic lighting')">🦸 Make Me Hero</button>
+<button style="width:auto;padding:6px 10px;font-size:11px;background:#333" onclick="quickAIEdit('Make background beach, sunset, beautiful')">🏖️ Beach Background</button>
+<button style="width:auto;padding:6px 10px;font-size:11px;background:#333" onclick="quickAIEdit('Make this photo cartoon style, animated')">🎨 Cartoon Style</button>
+<button style="width:auto;padding:6px 10px;font-size:11px;background:#333" onclick="quickAIEdit('Make this person fair, glowing skin, bright, beautiful')">✨ Fair & Glow</button>
+<button style="width:auto;padding:6px 10px;font-size:11px;background:#333" onclick="quickAIEdit('Change background to Dubai Burj Khalifa, night lights')">🌃 Dubai Background</button>
+<button style="width:auto;padding:6px 10px;font-size:11px;background:#333" onclick="quickAIEdit('Make this photo black and white, classic')">⬛ Black & White</button>
+</div>
+<div id="aiLoading" style="display:none;text-align:center;padding:15px"><p>🤖 AI is Editing... Please Wait 10 Sec...</p><p style="font-size:30px">⏳</p></div>
+<div id="aiResult" style="display:none">
+<p style="font-weight:bold;color:#00ff88">✅ AI Edited Photo is Ready!</p>
+<img id="aiEditedImg" class="aiImg" src="">
+<button style="background:#00ff88" onclick="downloadAIEdited()">⬇️ Download AI Photo</button>
+<button style="background:#222" onclick="useAIAsOriginal()">🔄 Use This As Original & Edit Again</button>
+</div>
+</div>
+<p style="font-size:13px;margin-top:12px">Manual Filters:</p>
+<button style="width:auto;padding:8px 12px;font-size:12px;background:#333" onclick="applyQuickFilter('brightness(1.45) saturate(1.1)')">Bright</button>
+<button style="width:auto;padding:8px 12px;font-size:12px;background:#333" onclick="applyQuickFilter('grayscale(1)')">B&W</button>
+<button style="width:auto;padding:8px 12px;font-size:12px;background:#333" onclick="applyQuickFilter('sepia(1)')">Old</button>
+<button style="width:auto;padding:8px 12px;font-size:12px;background:#333" onclick="applyQuickFilter('contrast(1.6) saturate(1.6)')">Mass</button>
+<button style="width:auto;padding:8px 12px;font-size:12px;background:#333" onclick="applyQuickFilter('none')">Reset</button>
+</div>
+</div>
+
+<!-- SONGS -->
+<div class="card" style="text-align:left"><h3>🎵 Songs - 6 Languages</h3>
+<p style="color:#888;font-size:13px">Voice: Say "Play Telugu Songs"!</p>
+<div>
+<button class="tabBtn sel" onclick="showSongs('te',this)">Telugu</button>
+<button class="tabBtn" onclick="showSongs('kn',this)">Kannada</button>
+<button class="tabBtn" onclick="showSongs('ta',this)">Tamil</button>
+<button class="tabBtn" onclick="showSongs('ml',this)">Malayalam</button>
+<button class="tabBtn" onclick="showSongs('hi',this)">Hindi</button>
+<button class="tabBtn" onclick="showSongs('en',this)">English</button>
+</div>
+<div id="songList"></div>
+<input id="customSong" placeholder="Type Song Name..." style="width:100%;box-sizing:border-box">
+<button style="background:#222" onclick="addCustomSong()">➕ Add Song & Play</button>
+</div>
+
+</div>
+
+<div id="appResult"><h3 id="appTitle">Result</h3><div id="appBody"></div><button style="background:#222" onclick="closeAppResult()">Close</button></div>
+
+<script>
+var GEMINI_KEYS = ["PASTE_KEY_1_HERE","PASTE_KEY_2_HERE","PASTE_KEY_3_HERE"];
+var currentKeyIndex = 0;
+var GEMINI_KEY = GEMINI_KEYS[0];
+var openedWindows = [];
+var currentLang='en'; var currentLangCode='en-IN';
+function detectLanguage(text){ var t=text||""; if(/[\u0C00-\u0C7F]/.test(t)) return {lang:'te',code:'te-IN'}; if(/[\u0C80-\u0CFF]/.test(t)) return {lang:'kn',code:'kn-IN'}; if(/[\u0900-\u097F]/.test(t)) return {lang:'hi',code:'hi-IN'}; if(/[\u0B80-\u0BFF]/.test(t)) return {lang:'ta',code:'ta-IN'}; if(/[\u0D00-\u0D7F]/.test(t)) return {lang:'ml',code:'ml-IN'}; return {lang:'en',code:'en-IN'}; }
+
+// APPS
+var APPS = {
+"whatsapp":{name:"WhatsApp",web:"https://web.whatsapp.com"},
+"youtube":{name:"YouTube",web:"https://www.youtube.com"},
+"instagram":{name:"Instagram",web:"https://www.instagram.com"},
+"facebook":{name:"Facebook",web:"https://www.facebook.com"},
+"gmail":{name:"Gmail",web:"https://mail.google.com"},
+"maps":{name:"Google Maps",web:"https://maps.google.com"},
+"spotify":{name:"Spotify",web:"https://open.spotify.com"},
+"telegram":{name:"Telegram",web:"https://web.telegram.org"},
+"netflix":{name:"Netflix",web:"https://www.netflix.com"},
+"amazon":{name:"Amazon",web:"https://www.amazon.in"},
+"flipkart":{name:"Flipkart",web:"https://www.flipkart.com"},
+"chatgpt":{name:"ChatGPT",web:"https://chatgpt.com"},
+"wikipedia":{name:"Wikipedia",web:"https://en.wikipedia.org"}
+};
+function openAppByName(k){ var app=APPS[k]; if(!app) return false; var msg=app.name+" is Opening!"; document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> '+msg; speakText(msg); if(app.web){ var w=window.open(app.web,'_blank'); if(w) openedWindows.push(w); } return true; }
+function openAnyAppFromText(raw){ var low=raw.toLowerCase(); for(var k in APPS){ if(low.indexOf(k)!==-1) return openAppByName(k); } return false; }
+
+// SONGS
+var SONGS = {
+te:["Oo Antava - Pushpa","Srivalli - Pushpa","Butta Bomma - Ala Vaikunthapurramuloo","Naatu Naatu - RRR","Samajavaragamana - Ala Vaikunthapurramuloo"],
+kn:["KGF Theme - KGF","Salaam Rocky Bhai - KGF","Karabuu - Pogaru","Belageddu - Kirik Party","Anisuthide - Mungaru Male"],
+ta:["Vaathi Coming - Master","Arabic Kuthu - Beast","Rowdy Baby - Maari 2","Kaavaalaa - Jailer","Hukum - Jailer"],
+ml:["Manikya Malaraya Poovi - Oru Adaar Love","Malare - Premam","Jalebi - Premam","Rasaathi - Manjummel Boys","Neela Nilave - Premalu"],
+hi:["Tum Hi Ho - Aashiqui 2","Kesariya - Brahmastra","Chaleya - Jawan","Animal Title - Animal","Apna Bana Le - Bhediya"],
+en:["Shape of You - Ed Sheeran","Perfect - Ed Sheeran","Blinding Lights - The Weeknd","As It Was - Harry Styles","Levitating - Dua Lipa"]
+};
+var currentSongLang='te';
+function showSongs(lang, btn){ currentSongLang=lang; var all=document.querySelectorAll('.tabBtn'); for(var i=0;i<all.length;i++) all[i].classList.remove('sel'); if(btn) btn.classList.add('sel'); var list=SONGS[lang]; var html=""; for(var i=0;i<list.length;i++){ html+='<div class="songItem"><b>🎵 '+list[i]+'</b><button class="playBtn" onclick="playSong(\''+list[i].replace(/'/g,"")+'\')">▶ Play</button></div>'; } document.getElementById('songList').innerHTML=html; }
+function playSong(s){ var msg=s+" is Playing!"; document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> '+msg; speakText(msg); var w=window.open('https://music.youtube.com/search?q='+encodeURIComponent(s),'_blank'); if(w) openedWindows.push(w); }
+function addCustomSong(){ var s=document.getElementById('customSong').value.trim(); if(!s){ alert('Type Song Name!'); return; } SONGS[currentSongLang].unshift(s); document.getElementById('customSong').value=''; showSongs(currentSongLang,null); playSong(s); }
+showSongs('te',null);
+
+// AI PHOTO EDITOR
+var originalPhotoBase64 = "";
+var originalPhotoMime = "image/jpeg";
+function loadEditPhoto(e){
+  var file=e.target.files[0]; if(!file) return;
+  originalPhotoMime = file.type || "image/jpeg";
+  var r=new FileReader(); r.onload=function(ev){
+    originalPhotoBase64 = ev.target.result.split(',')[1];
+    document.getElementById('editImg').src=ev.target.result;
+    document.getElementById('editArea').style.display='block';
+    document.getElementById('aiResult').style.display='none';
+    speakText('Photo Uploaded! Now tell me what to do! Say Make Me Hero!');
+  }; r.readAsDataURL(file);
+}
+function quickAIEdit(cmd){ document.getElementById('photoPrompt').value=cmd; editPhotoWithAI(); }
+function applyQuickFilter(f){ document.getElementById('editImg').style.filter=f; }
+async function editPhotoWithAI(){
+  var prompt = document.getElementById('photoPrompt').value.trim();
+  if(!prompt){ alert('Tell me what to do! Ex: Make me hero'); return; }
+  if(!originalPhotoBase64){ alert('First Upload Photo!'); return; }
+  document.getElementById('aiLoading').style.display='block';
+  document.getElementById('aiResult').style.display='none';
+  speakText('AI is Editing! Please wait 10 seconds!');
+  for(var k=0;k<GEMINI_KEYS.length;k++){
+    var tryKey = GEMINI_KEYS[(currentKeyIndex + k) % GEMINI_KEYS.length];
+    if(!tryKey || tryKey.indexOf('PASTE')!==-1) continue;
+    try{
+      var fullPrompt = "Edit this photo: " + prompt + ". Keep the same person face same, realistic, high quality, cinematic. Do not change face identity.";
+      var res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key='+tryKey, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{ parts:[ {text: fullPrompt}, {inlineData:{mimeType: originalPhotoMime, data: originalPhotoBase64}} ] }] })
+      });
+      var data = await res.json();
+      if(data && data.error && data.error.code === 429){ continue; }
+      document.getElementById('aiLoading').style.display='none';
+      var found = null;
+      if(data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts){
+        for(var i=0;i<data.candidates[0].content.parts.length;i++){
+          var p = data.candidates[0].content.parts[i];
+          if(p.inlineData && p.inlineData.data){ found = "data:"+p.inlineData.mimeType+";base64,"+p.inlineData.data; break; }
+        }
+      }
+      if(found){
+        currentKeyIndex = (currentKeyIndex + k) % GEMINI_KEYS.length;
+        document.getElementById('aiEditedImg').src = found;
+        document.getElementById('aiResult').style.display='block';
+        document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> AI Edit Done! Check it! Download if you like!';
+        speakText('AI Edit Done! Check it!');
+        return;
+      } else {
+        alert('AI Error: ' + JSON.stringify(data).slice(0,500));
+        return;
+      }
+    }catch(e){ continue; }
+  }
+  document.getElementById('aiLoading').style.display='none';
+  alert('All Keys Limit Finished! Create new key at aistudio.google.com or try tomorrow!');
+}
+function downloadAIEdited(){
+  var src=document.getElementById('aiEditedImg').src; if(!src){ alert('First Edit With AI!'); return; }
+  var a=document.createElement('a'); a.download='zoro-ai-edited.png'; a.href=src; a.click(); alert('AI Photo Downloaded!');
+}
+function useAIAsOriginal(){
+  var src=document.getElementById('aiEditedImg').src; if(!src) return;
+  originalPhotoBase64 = src.split(',')[1];
+  document.getElementById('editImg').src = src;
+  alert('Now this is your original! You can edit again!');
+}
+
+// NAMES & KNOWLEDGE
+var MALE_NAMES=["kowshik","hrudhay","paru","chintu","ramu","karthik","sai","nandeesh","nandish","akhil","arjun","ravi","suresh","kiran","manoj","pradeep","venkat","aditya","vikas","pavan","chandu","naveen","rohit","rahul","sandeep","anil","gopi","harsha","tej","vishnu","krishna","balu"];
+var FEMALE_NAMES=["priya","anitha","anita","siri","lakshmi","divya","sravani","sravanthi","swathi","swati","pooja","anjali","manasa","sneha","meghana","aishwarya","ramya","sandhya","kavya","navya","deepika","nandini","harika","sahithi","sahitya","keerthi","keerthana","pallavi","madhavi","sowmya","gayathri","gayatri","sindhu","bindu","rakshitha","varsha","shreya","sreeja","archana","uma","padma","geetha","rekha","sunitha","vanitha","lalitha","sujatha","pranavi","diya","riya","ananya","ishita","meena","kavitha"];
+function getSavedGender(){ try{ return JSON.parse(localStorage.getItem('zoro_name_gender')||'{}'); }catch(e){ return {}; } }
+function saveNameGender(n,g){ var m=getSavedGender(); m[n.toLowerCase()]=g; localStorage.setItem('zoro_name_gender',JSON.stringify(m)); }
+function detectGender(n){ var x=n.toLowerCase().trim(); var s=getSavedGender(); if(s[x]) return s[x]; if(FEMALE_NAMES.indexOf(x)!==-1) return 'female'; if(MALE_NAMES.indexOf(x)!==-1) return 'male'; return 'male'; }
+function getNameFromText(t){ t=t.toLowerCase().replace(/tell me about/g,'').replace(/about/g,'').replace(/who is/g,'').replace(/what is/g,'').replace(/\?/g,'').replace(/\./g,'').trim(); var p=t.split(' '); return p[0]||t; }
+function getCompliment(n){ var name=n.charAt(0).toUpperCase()+n.slice(1).toLowerCase(); var g=detectGender(n); var M=["is a very good boy! When he smiles, everyone smiles."]; var F=["is a very good girl! Her smile makes everyone happy."]; var l=(g==='female')?F:M; return name+" "+l[0]; }
+var KNOWLEDGE={"jarvis":"Jarvis is the smart computer in Iron Man movie, with Tony Stark.","virat kohli":"Virat Kohli is a great Indian cricketer.","telangana":"Telangana is our state. Capital is Hyderabad.","hyderabad":"Hyderabad is the capital of Telangana. Famous for Biryani and Charminar.","prabhas":"Prabhas is the Baahubali Hero.","dhoni":"MS Dhoni is Captain Cool."};
+function cleanTopic(r){ var t=r.toLowerCase().replace(/tell me about/g,'').replace(/what is/g,'').replace(/who is/g,'').replace(/about/g,'').replace(/\?/g,'').replace(/\./g,''); return t.trim(); }
+function getLocal(t){ var ct=cleanTopic(t); for(var k in KNOWLEDGE){ if(ct.indexOf(k)!==-1||k.indexOf(ct)!==-1) return KNOWLEDGE[k]; } return null; }
+async function askGemini(q){ var key=GEMINI_KEYS[currentKeyIndex]; if(!key||key.indexOf('PASTE')!==-1) return null; try{ var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"You are ZORO KH. Answer in English. Short friendly. Question: "+q}]}]})}); var d=await res.json(); if(d&&d.candidates&&d.candidates[0]&&d.candidates[0].content) return d.candidates[0].content.parts[0].text; }catch(e){ return null; } return null; }
+async function answerWithRealSearch(raw){ var n=localStorage.getItem('zoro_name')||'Friend'; var low=raw.toLowerCase(); if(low.indexOf('about')!==-1){ var nm=getNameFromText(raw); if(nm.length>=3){ if(!getLocal(raw)&&(MALE_NAMES.indexOf(nm.toLowerCase())!==-1||FEMALE_NAMES.indexOf(nm.toLowerCase())!==-1||getSavedGender()[nm.toLowerCase()])){ var comp=getCompliment(nm); var ans="Listen "+n+"! "+comp; document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> '+ans; speakText(ans); return; } } } var local=getLocal(raw); if(local){ var a1="Listen "+n+"! "+local; document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> '+a1; speakText(a1); return; } var wait="Thinking, also searching in Google..."; document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> '+wait; var g=await askGemini(raw); var box=document.getElementById('chatBox'); if(g){ box.innerHTML=box.innerHTML.replace(wait,g); speakText(g); return; } window.open('https://www.google.com/search?q='+encodeURIComponent(raw),'_blank'); var ga="Listen "+n+"! I searched in Google and opened it!"; box.innerHTML=box.innerHTML.replace(wait,ga); speakText(ga); }
+var CONTACTS={"kowshik":{name:"Kowshik",phone:"+91 98765 43210"},"hrudhay":{name:"Hrudhay",phone:"+91 91234 56780"},"paru":{name:"Paru",phone:"+91 90000 55555"}};
+function loadProfilePhoto(){ var pic=localStorage.getItem('zoro_profile_pic'); if(pic){ document.getElementById('profilePic').src=pic; document.getElementById('profilePic').style.display='block'; document.getElementById('profilePicEmoji').style.display='none'; document.getElementById('mainProfilePic').src=pic; document.getElementById('mainProfilePic').style.display='block'; document.getElementById('mainProfileEmoji').style.display='none'; } else { document.getElementById('profilePic').style.display='none'; document.getElementById('profilePicEmoji').style.display='block'; document.getElementById('mainProfilePic').style.display='none'; document.getElementById('mainProfileEmoji').style.display='block'; } }
+function uploadProfilePhoto(e){ var f=e.target.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(ev){ localStorage.setItem('zoro_profile_pic',ev.target.result); loadProfilePhoto(); alert('Photo Saved!'); }; r.readAsDataURL(f); }
+function removeProfilePhoto(){ localStorage.removeItem('zoro_profile_pic'); loadProfilePhoto(); }
+function cleanForSpeak(t){ return t.replace(/[^a-zA-Z0-9 ,.]/g,' '); }
+function speakText(t){ try{ speechSynthesis.cancel(); var s=new SpeechSynthesisUtterance(cleanForSpeak(t)); s.lang='en-IN'; s.rate=0.95; s.pitch=1.1; speechSynthesis.speak(s); }catch(e){} }
+if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged=function(){ speechSynthesis.getVoices(); }; }
+function login(t){ localStorage.setItem('zoro_login','yes'); localStorage.setItem('zoro_login_type',t); document.getElementById('loginScreen').style.display='none'; document.getElementById('genderScreen').style.display='block'; document.getElementById('topBar').style.display='none'; }
+function goDetails(){ document.getElementById('genderScreen').style.display='none'; document.getElementById('detailScreen').style.display='block'; var sn=localStorage.getItem('zoro_name'); var sa=localStorage.getItem('zoro_age'); if(sn) document.getElementById('userName').value=sn; if(sa) document.getElementById('userAge').value=sa; }
+function selectGender(g,btn){ localStorage.setItem('zoro_gender',g); var a=document.querySelectorAll('.genderBtn'); for(var i=0;i<a.length;i++) a[i].classList.remove('sel'); if(btn) btn.classList.add('sel'); }
+function confirmDetails(){ var n=document.getElementById('userName').value.trim(); var a=document.getElementById('userAge').value; if(!n||n.length<4){ alert('Name - Min 4 Letters!'); return; } if(!a||a<5){ alert('Age - Min 5!'); return; } localStorage.setItem('zoro_name',n); localStorage.setItem('zoro_age',a); document.getElementById('startBtn').style.display='block'; alert('Saved! '+n); }
+function saveDetails(){ showMain(); }
+function changeName(){ var nn=document.getElementById('newName').value.trim(); if(!nn||nn.length<4){ alert('Name - Min 4!'); return; } localStorage.setItem('zoro_name',nn); updateProfileInfo(); alert('Name Changed! '+nn); }
+function updateProfileInfo(){ var n=localStorage.getItem('zoro_name')||''; var a=localStorage.getItem('zoro_age')||''; var ty=localStorage.getItem('zoro_login_type')||'Gmail'; document.getElementById('profileName').innerText=n; document.getElementById('profileAge').innerText=a; document.getElementById('profileLogin').innerText=ty; document.getElementById('hiText').innerText='Hey '+n+' 🔥'; }
+function toggleMenu(){ document.getElementById('sideMenu').classList.toggle('open'); if(document.getElementById('sideMenu').classList.contains('open')){ loadProfilePhoto(); updateProfileInfo(); loadHistory(); } }
+function toggleSection(w){ var ks=['profile','history']; for(var i=0;i<ks.length;i++){ var b=document.getElementById('box'+ks[i].charAt(0).toUpperCase()+ks[i].slice(1)); if(b) b.classList.remove('show'); } var el=document.getElementById('box'+w.charAt(0).toUpperCase()+w.slice(1)); if(el) el.classList.add('show'); if(w==='history') loadHistory(); }
+function saveHistory(t){ var h=JSON.parse(localStorage.getItem('zoro_history')||'[]'); h.unshift(t); localStorage.setItem('zoro_history',JSON.stringify(h.slice(0,30))); }
+function loadHistory(){ var h=JSON.parse(localStorage.getItem('zoro_history')||'[]'); document.getElementById('historyBox').innerHTML=h.length?h.map(function(x){ return '<div class="hist">'+x+'</div>'; }).join(''):'History Empty!'; }
+function clearHistory(){ localStorage.removeItem('zoro_history'); loadHistory(); }
+function logout(){ localStorage.removeItem('zoro_login'); localStorage.removeItem('zoro_name'); location.reload(); }
+function showMain(){ document.getElementById('topBar').style.display='flex'; var ids=['loginScreen','genderScreen','detailScreen']; for(var i=0;i<ids.length;i++) document.getElementById(ids[i]).style.display='none'; document.getElementById('mainScreen').style.display='block'; updateProfileInfo(); loadProfilePhoto(); document.getElementById('chatBox').innerHTML='ZORO KH: Hey! I am Hands-Free! Upload a Photo and say Make Me Hero - AI will edit directly!'; speakText('Hey! I am Hands Free!'); }
+function showAppResult(t,h){ document.getElementById('appTitle').innerText=t; document.getElementById('appBody').innerHTML=h; document.getElementById('appResult').style.display='block'; }
+function closeAppResult(){ document.getElementById('appResult').style.display='none'; }
+function handleVoiceCommand(raw){
+  var text=raw.toLowerCase(); var n=localStorage.getItem('zoro_name')||'Friend';
+  function say(r){ document.getElementById('chatBox').innerHTML+='<br><br><b>ZORO:</b> '+r; speakText(r); return true; }
+  if(text.indexOf('close')!==-1){ closeAppResult(); if(openedWindows.length>0){ for(var i=0;i<openedWindows.length;i++){ try{ openedWindows[i].close(); }catch(e){} } openedWindows=[]; return say('Closed!'); } return say('Closed!'); }
+  if(text.indexOf('scroll down')!==-1){ window.scrollBy(0,500); return say('Scrolled Down!'); }
+  if(text.indexOf('scroll up')!==-1){ window.scrollBy(0,-500); return say('Scrolled Up!'); }
+  if(text.indexOf('photo')!==-1 && (text.indexOf('hero')!==-1||text.indexOf('edit')!==-1||text.indexOf('cartoon')!==-1||text.indexOf('beach')!==-1||text.indexOf('dubai')!==-1)){
+    document.getElementById('photoPrompt').value=text; editPhotoWithAI(); return true;
+  }
+  if(text.indexOf('telugu songs')!==-1){ showSongs('te',null); playSong(SONGS.te[0]); return true; }
+  if(text.indexOf('kannada songs')!==-1){ showSongs('kn',null); playSong(SONGS.kn[0]); return true; }
+  if(text.indexOf('tamil songs')!==-1){ showSongs('ta',null); playSong(SONGS.ta[0]); return true; }
+  if(text.indexOf('malayalam songs')!==-1){ showSongs('ml',null); playSong(SONGS.ml[0]); return true; }
+  if(text.indexOf('hindi songs')!==-1){ showSongs('hi',null); playSong(SONGS.hi[0]); return true; }
+  if(text.indexOf('english songs')!==-1){ showSongs('en',null); playSong(SONGS.en[0]); return true; }
+  if(text.indexOf('play')!==-1){ var song=text.replace('play','').replace('song','').replace('songs','').trim(); if(song){ playSong(song); return true; } playSong(SONGS[currentSongLang][0]); return true; }
+  if(text.indexOf('search')!==-1){ var q=text.replace('search','').replace('in google','').trim(); var w2=window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank'); if(w2) openedWindows.push(w2); return say(q+' - Searched in Google!'); }
+  if(text.indexOf('open')!==-1){ if(openAnyAppFromText(text)) return true; }
+  return false;
+}
+var isListening=false; var recognition=null; var shouldListen=false;
+function startListening(){
+  try{ recognition=new (window.SpeechRecognition||window.webkitSpeechRecognition)(); }catch(e){ alert('Mic works only in Chrome / Safari!'); return; }
+  recognition.lang='en-IN'; recognition.continuous=true; recognition.interimResults=false;
+  recognition.onresult=function(e){ var text=e.results[e.results.length-1][0].transcript; var n=localStorage.getItem('zoro_name')||'Friend'; document.getElementById('chatBox').innerHTML+='<br><br><b>'+n+':</b> '+text; saveHistory(text); if(!handleVoiceCommand(text)){ answerWithRealSearch(text); } };
+  recognition.onend=function(){ if(shouldListen){ try{ recognition.start(); }catch(e){} } else { isListening=false; document.getElementById('micBtn').classList.remove('listening'); document.getElementById('onBtn').innerText='🔵 START LISTENING'; document.getElementById('onBtn').classList.remove('on'); document.getElementById('micStatus').innerText='Mic is OFF'; } };
+  recognition.onerror=function(){ if(shouldListen){ setTimeout(function(){ try{ recognition.start(); }catch(e){} },1000); } };
+  try{ recognition.start(); }catch(e){}
+  isListening=true; shouldListen=true; document.getElementById('micBtn').classList.add('listening'); document.getElementById('onBtn').innerText='🟢 STOP - Mic is ON'; document.getElementById('onBtn').classList.add('on'); document.getElementById('micStatus').innerText='Mic is ON - Always Listening!';
+}
+function toggleMic(){ if(isListening){ shouldListen=false; if(recognition){ try{ recognition.stop(); }catch(e){} } isListening=false; document.getElementById('micBtn').classList.remove('listening'); document.getElementById('onBtn').innerText='🔵 START LISTENING'; document.getElementById('onBtn').classList.remove('on'); document.getElementById('micStatus').innerText='Mic is OFF'; return; } startListening(); }
+loadProfilePhoto();
+var savedLogin=localStorage.getItem('zoro_login'); var savedName=localStorage.getItem('zoro_name');
+if(savedLogin==='yes'&&savedName){ document.getElementById('topBar').style.display='flex'; showMain(); }
+else if(savedLogin==='yes'){ document.getElementById('topBar').style.display='none'; document.getElementById('loginScreen').style.display='none'; document.getElementById('genderScreen').style.display='block'; }
+else { document.getElementById('topBar').style.display='none'; }
+</script>
+</body>
+</html>
